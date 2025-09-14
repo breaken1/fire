@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>绽放的烟花 - 生日快乐</title>
+  <style>
+    html, body {
+      margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden;
+      background: black;
+    }
+    #canvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      z-index: 0;
+    }
+    #credit {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      color: #fff;
+      font-family: sans-serif;
+      z-index: 1;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <div id="credit">点击烟花，绽放「生日快乐」</div>
+  <script>
+    // 烟花参数
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let w = window.innerWidth, h = window.innerHeight;
+    canvas.width = w;
+    canvas.height = h;
+
+    window.addEventListener('resize', () => {
+      w = window.innerWidth;
+      h = window.innerHeight;
+      canvas.width = w;
+      canvas.height = h;
+    });
+
+    // 烟花粒子
+    class Particle {
+      constructor(x, y, angle, speed, color, size, fade, shape = "circle", text = "") {
+        this.x = x;
+        this.y = y;
+        this.vx = Math.cos(angle) * speed;
+        this.vy = Math.sin(angle) * speed;
+        this.alpha = 1;
+        this.color = color;
+        this.size = size;
+        this.fade = fade;
+        this.shape = shape;
+        this.text = text;
+      }
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += 0.015; // 重力
+        this.alpha -= this.fade;
+      }
+      draw(ctx) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(this.alpha, 0);
+        ctx.fillStyle = this.color;
+        if (this.shape === "star") {
+          drawStar(ctx, this.x, this.y, this.size, 5, 0.5);
+        } else if (this.shape === "heart") {
+          drawHeart(ctx, this.x, this.y, this.size);
+        } else if (this.shape === "text" && this.text) {
+          ctx.font = `${this.size * 2}px bold`;
+          ctx.fillStyle = "#FFD700";
+          ctx.textAlign = "center";
+          ctx.fillText(this.text, this.x, this.y);
+        } else {
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+    }
+
+    function drawStar(ctx, x, y, r, n, inset) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.translate(x, y);
+      ctx.moveTo(0, 0 - r);
+      for (let i = 0; i < n; i++) {
+        ctx.rotate(Math.PI / n);
+        ctx.lineTo(0, 0 - (r * inset));
+        ctx.rotate(Math.PI / n);
+        ctx.lineTo(0, 0 - r);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawHeart(ctx, x, y, size) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.translate(x, y);
+      ctx.moveTo(0, size/4);
+      ctx.bezierCurveTo(size/2, -size/2, size, size/2, 0, size);
+      ctx.bezierCurveTo(-size, size/2, -size/2, -size/2, 0, size/4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 烟花爆炸
+    function spawnFirework(x, y, isBirthday = false) {
+      const colors = [
+        "#FF3E3E", "#FFDD3E", "#3EFF62", "#3ED6FF", "#A23EFF", "#FF3ED6",
+        "#FFD700", "#00FFFF", "#FF69B4", "#00FF00"
+      ];
+      const shapes = ["circle", "star", "heart"];
+      let particles = [];
+      if (isBirthday) {
+        // 绽放“生日快乐”
+        for (let i = 0; i < 80; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          particles.push(
+            new Particle(
+              x, y,
+              angle,
+              Math.random() * 5 + 2,
+              "#FFD700",
+              6,
+              0.012 + Math.random()*0.008,
+              shapes[Math.floor(Math.random()*shapes.length)]
+            )
+          );
+        }
+        particles.push(new Particle(x, y, 0, 0, "#FFD700", 20, 0.012, "text", "生日快乐"));
+      } else {
+        // 普通烟花
+        const n = Math.floor(Math.random()*30)+30;
+        const color = colors[Math.floor(Math.random()*colors.length)];
+        const shape = shapes[Math.floor(Math.random()*shapes.length)];
+        for (let i = 0; i < n; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          particles.push(
+            new Particle(
+              x, y,
+              angle,
+              Math.random() * 4 + 1.5,
+              colors[Math.floor(Math.random()*colors.length)],
+              Math.random()*5+2,
+              0.01 + Math.random()*0.006,
+              shape
+            )
+          );
+        }
+      }
+      fireworks.push(particles);
+    }
+
+    // 烟花管理
+    let fireworks = [];
+    setInterval(() => {
+      // 随机生成烟花
+      spawnFirework(
+        Math.random()*w*0.8 + w*0.1,
+        Math.random()*h*0.3 + h*0.3
+      );
+    }, 800);
+
+    canvas.addEventListener('click', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      spawnFirework(x, y, true);
+    });
+
+    // 动画主循环
+    function loop() {
+      ctx.clearRect(0, 0, w, h);
+      for (let i = fireworks.length-1; i >= 0; i--) {
+        let f = fireworks[i];
+        for (let j = f.length-1; j >= 0; j--) {
+          let p = f[j];
+          p.update();
+          p.draw(ctx);
+          if (p.alpha <= 0) {
+            f.splice(j, 1);
+          }
+        }
+        if (f.length === 0) {
+          fireworks.splice(i, 1);
+        }
+      }
+      requestAnimationFrame(loop);
+    }
+    loop();
+  </script>
+</body>
+</html>
